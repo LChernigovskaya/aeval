@@ -215,11 +215,11 @@ namespace ufo
             types.push_back(bind::typeOf(destination->arg(ind + 1)));
             Expr rel = bind::fdecl (efac.mkTerm(destination->left()->left()->op()), types);
             Expr baseApp = bind::fapp (rel, newVars);
-            // outs() << "DESTINATION " << *destination <<" " << destination->arity() << ind<<  "\n"; 
+            // outs() << "DESTINATION " << *destination <<" " << destination->arity() << ind<<  "\n";
             destination = mk<EQ>(baseApp, destination->arg(ind + 1));
             // outs() << *destination << "\n";
           }
-          
+
           for (int i = 0; i < chc.srcRelations.size(); i++) {
             if (decls.find(chc.srcRelations[i]) != decls.end()) {
               int ind = values_inds[chc.srcRelations[i]->left()];
@@ -241,7 +241,7 @@ namespace ufo
           // findMatchingFromLeftSide(left, matching);
           // goal = replaceAll(goal, matching);
           // goal = simplifyBool(goal);
-          // matching.clear();          
+          // matching.clear();
 
           // outs() << "GOAL: \n";
           // outs() << *goal << "\n";
@@ -256,14 +256,14 @@ namespace ufo
           goal = replaceAll(goal, matching);
 //          goal = simplifyArithm(goal);
           goal = simplifyBool(goal);
-          // if (goal->arity() > 0) { 
-          //   goal = createQuantifiedFormula(goal, constructors); 
-          // }          
+          // if (goal->arity() > 0) {
+          //   goal = createQuantifiedFormula(goal, constructors);
+          // }
           ExprVector current_assumptions = assumptions;
           // outs() << "assumptions:\n";
           // for (auto & a : current_assumptions) {
           //   outs() << *a << "\n";
-          // } 
+          // }
           // outs() << "goal: \n";
           // outs() << *goal << "\n";
           if (!prove (current_assumptions, goal)) {
@@ -292,7 +292,7 @@ namespace ufo
           // outs() << "assumptions:\n";
           // for (auto & a : current_assumptions) {
           //   outs() << *a << "\n";
-          // } 
+          // }
           // outs() << "goal: \n";
           // outs() << *goal << "\n";
           if (!prove (current_assumptions, goal)) {
@@ -312,13 +312,13 @@ namespace ufo
               for(int j = 0; j < chc.body->arity(); ++j) {
                 Expr body_elem = chc.body->arg(j);
                 if (isOpX<EQ>(body_elem)) {
-                  if (body_elem->left() == chc.dstVars[i] && body_elem->right()->arity() == 1 || 
-                    body_elem->right() == chc.dstVars[i] && body_elem->left()->arity() == 1) {
+                  if ((body_elem->left() == chc.dstVars[i] && body_elem->right()->arity() == 1) ||
+                    (body_elem->right() == chc.dstVars[i] && body_elem->left()->arity() == 1)) {
                     return i;
                   }
                 }
               }
-            }       
+            }
           }
         }
       }
@@ -344,7 +344,7 @@ namespace ufo
         }
       }
       ordered_decls.push_back(decl);
-      
+
     }
 
     // Get indexes in right order and remove the base index
@@ -577,10 +577,10 @@ namespace ufo
       adts.insert(a->last());
     }
 
-    CHCSolver sol (constructors, adts, efac, decls, ruleManager.extras, ruleManager.chcs, 
+    CHCSolver sol (constructors, adts, efac, decls, ruleManager.extras, ruleManager.chcs,
       givePriorityNonAdt, ignoreBaseVar);
     bool res = containsOp<ARRAY_TY>(conjoin(decls, efac)) ? sol.solveArr() : sol.solve();
-    outs () << (res ? "unsat\n" : "unknown\n");
+    outs () << (res ? "sat\n" : "unknown\n");
   }
 }
 

@@ -101,41 +101,24 @@ namespace ufo
       return false;
     }
 
-    void preprocess (Expr term, ExprVector& locVars, vector<ExprVector>& srcVars, ExprVector &srcRelations, ExprSet& lin)
+    void splitBody (Expr body, vector<ExprVector>& srcVars, ExprVector &srcRelations, ExprSet& lin)
     {
-      if (isOpX<AND>(term))
+      getConj (body, lin);
+      for (auto c = lin.begin(); c != lin.end(); )
       {
-        for (auto it = term->args_begin(), end = term->args_end(); it != end; ++it)
+        Expr cnj = *c;
+        if (isOpX<FAPP>(cnj) && isOpX<FDECL>(cnj->left()))
         {
-          preprocess(*it, locVars, srcVars, srcRelations, lin);
+          Expr rel = cnj->arg(0);
+          addDecl(rel);
+          srcRelations.push_back(rel);
+          ExprVector tmp;
+          for (auto it = cnj->args_begin()+1, end = cnj->args_end(); it != end; ++it)
+            tmp.push_back(*it);
+          srcVars.push_back(tmp);
+          c = lin.erase(c);
         }
-      }
-      else
-      {
-        if (bind::isBoolConst(term))
-        {
-          lin.insert(term);
-        }
-        if (isOpX<FAPP>(term) && isOpX<FDECL>(term->arg(0)) &&
-            find(decls.begin(), decls.end(), term->arg(0)) != decls.end())
-        // GF: the last requirement might be too restrictive: a rule with
-        //     the term->arg(0) in the head should already be encountered
-        {
-          Expr rel = term->arg(0);
-          if (rel->arity() >= 2)
-          {
-            addDecl(rel);
-            srcRelations.push_back(rel);
-            ExprVector tmp;
-            for (auto it = term->args_begin()+1, end = term->args_end(); it != end; ++it)
-              tmp.push_back(*it);
-            srcVars.push_back(tmp);
-          }
-        }
-        else
-        {
-          lin.insert(term);
-        }
+        else ++c;
       }
     }
 
@@ -242,7 +225,7 @@ namespace ufo
         Expr head = r->arg(1);
         vector<ExprVector> origSrcSymbs;
         ExprSet lin;
-        preprocess(body, hr.locVars, origSrcSymbs, hr.srcRelations, lin);
+        splitBody(body, origSrcSymbs, hr.srcRelations, lin);
         if (hr.srcRelations.size() == 0)
         {
           if (hasUninterp(body))
@@ -258,14 +241,7 @@ namespace ufo
 
         if (isOpX<FAPP>(head))
         {
-          if (head->arg(0)->arity() == 2 && !hr.isFact)
-          {
-            addFailDecl(head->arg(0)->arg(0));
-          }
-          else
-          {
-            addDecl(head->arg(0));
-          }
+          addDecl(head->arg(0));
           hr.dstRelation = head->arg(0);
         }
         else
@@ -318,7 +294,8 @@ namespace ufo
         hr.assignVarsAndRewrite (origSrcSymbs, tmp,
                                  origDstSymbs, invVars[hr.dstRelation]);
 
-        if (isOpX<TRUE>(hr.body) || (hr.srcRelations.size() == 0 && hr.isQuery))
+        if ((isOpX<TRUE>(hr.body) && !hr.isQuery) ||
+            (hr.srcRelations.size() == 0 && hr.isQuery))
         {
           extras.push_back(r1);
           chcs.pop_back();
