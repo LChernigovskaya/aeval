@@ -209,6 +209,7 @@ namespace ufo
       Expr e = z3_from_smtlib_file (m_z3, smt_file);
       ExprSet cnjs;
       getConj(e, cnjs);
+      unitPropagation(cnjs);
 
       for (auto r1: cnjs)
       {
@@ -316,6 +317,27 @@ namespace ufo
       for (int i = 0; i < chcs.size(); i++)
         incms[chcs[i].dstRelation].push_back(i);
 
+    }
+
+    void unitPropagation(ExprSet &cnjs) {
+      ExprMap matching;
+      for  (auto &r: cnjs) {
+        if (isOpX<NEG>(r) && r->arity() == 1 && !isOpX<FALSE>(r->left())) {
+          matching[r->left()] = mk<FALSE>(m_efac);
+        }
+      }
+      if (matching.empty()) {
+        return;
+      }
+      else {
+        ExprSet newCnjs;
+        for  (auto &r: cnjs) {
+          Expr r1 = replaceAll(r, matching);
+          newCnjs.insert(r1);
+        }
+        cnjs = newCnjs;
+        unitPropagation(cnjs);
+      }
     }
 
     void addFailDecl(Expr decl)
