@@ -3,22 +3,10 @@
 (declare-datatypes ((listOfInt 0) )
 (((cons-listOfInt (head-listOfInt Int) (tail-listOfInt listOfInt)) (nil-listOfInt))))
 
-(declare-fun id_list (listOfInt listOfInt) Bool)
 (declare-fun len (listOfInt Int) Bool)
 (declare-fun append (listOfInt listOfInt listOfInt) Bool)
 (declare-fun ff () Bool)
 
-(assert
-    (id_list nil-listOfInt nil-listOfInt)
-)
-(assert
-  (forall ( (A Int) (B listOfInt) (C listOfInt) )
-    (=>
-      (id_list B C)
-      (id_list (cons-listOfInt A B) (cons-listOfInt A C))
-    )
-  )
-)
 (assert
   (forall ( (A Int) )
     (=>
