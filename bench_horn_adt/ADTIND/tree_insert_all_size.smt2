@@ -21,7 +21,8 @@
 	(=> (and (insert-all x ls y) (= xs (cons n ls)) (insert y n z)) (insert-all x xs z))))
 
 ;extra lemmas
-(assert (forall ((t Tree) (n Int) (st Int) (x Tree)) (=> (and (size t st) (insert t n x)) (size x (+ 1 st)))))
+(assert (forall ((t Tree) (n Int) (st Int) (x Tree) (sx Int)) 
+	(=> (and (size t st) (insert t n x) (size x sx) (not (= sx (+ 1 st)))) false)))
 
 (assert (forall ((l Lst) (t Tree) (i Int) (x Tree) (m Int) (n Int))
 	(=> (and (size t n) (insert t i x) (size x m) (not (= m (+ 1 n)))) false)))

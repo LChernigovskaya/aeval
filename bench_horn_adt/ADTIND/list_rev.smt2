@@ -12,8 +12,8 @@
 	(=> (and (= xs (cons x ys)) (rev ys rs) (append rs (cons x nil) ts)) (rev xs ts))))
 
 ; extra lemmas
-(assert (forall ((xs Lst) (ys Lst) (zs Lst) (us Lst) (rs Lst) (ts Lst)) 
-	(=> (and (append xs ys zs) (rev ys rs) (rev xs ts) (append rs ts us)) (rev zs us))))
+(assert (forall ((xs Lst) (ys Lst) (zs Lst) (us Lst) (rs Lst) (ts Lst) (vs Lst))
+    (=> (and (append xs ys zs) (rev ys rs) (rev xs ts) (append rs ts us) (rev zs vs) (not (= us vs))) false)))
 
 (assert (forall ((xs Lst) (ys Lst) (zs Lst)) (=> (and (rev xs ys) (rev ys zs) (not (= xs zs))) false)))
 
