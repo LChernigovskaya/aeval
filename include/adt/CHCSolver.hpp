@@ -152,34 +152,57 @@ namespace ufo
 
     bool createQueries() {
       // creating assumptions
-      for (auto & chc : chcs) {
-        if (!chc.isQuery) {
-          ExprVector cnj;
-          ExprMap matching;
-          createLeftConjs(chc, cnj);
-          findMatchingFromBody(chc, matching, cnj);
-          Expr destination = bind::fapp (chc.dstRelation, chc.dstVars);
-          int ind;
-          if (decls.find(chc.dstRelation) != decls.end()) {
-            destination = createDestination(chc);
-          }
-          Expr asmpt = mk<IMPL>(conjoin(cnj, efac), destination);
-          asmpt = replaceAll(asmpt, matching);
+      for (auto & decl : ordered_decls) {
+        for (auto & chc : chcs) {
+          if (chc.dstRelation == decl) {
+            ExprVector cnj;
+            ExprMap matching;
+            createLeftConjs(chc, cnj);
+            findMatchingFromBody(chc, matching, cnj);
+            Expr destination = bind::fapp (chc.dstRelation, chc.dstVars);
+            int ind;
+            if (decls.find(chc.dstRelation) != decls.end()) {
+              destination = createDestination(chc);
+            }
+            Expr asmpt = mk<IMPL>(conjoin(cnj, efac), destination);
+            asmpt = replaceAll(asmpt, matching);
 
-          // trying substitute equalities from left side to the right one
-          matching.clear();
-          Expr left = asmpt->left();
-          findMatchingFromLeftSide(left, matching);
+            // trying substitute equalities from left side to the right one
+            matching.clear();
+            Expr left = asmpt->left();
+            findMatchingFromLeftSide(left, matching);
 
-          // outs() << *asmpt << "\n";
-          asmpt = replaceAll(asmpt, matching);
-          asmpt = simplifyArithm(asmpt);
-          asmpt = simplifyBool(asmpt);
-          if (asmpt->arity() > 0) {
-            asmpt = createQuantifiedFormula(asmpt, constructors);
+            // outs() << *asmpt << "\n";
+            asmpt = replaceAll(asmpt, matching);
+            asmpt = simplifyArithm(asmpt);
+            asmpt = simplifyBool(asmpt);
+            if (asmpt->arity() > 0) {
+              asmpt = createQuantifiedFormula(asmpt, constructors);
+            }
+            // outs() << "new assumption: " << *asmpt << "\n";
+            assumptions.push_back(asmpt);
           }
-          // outs() << "new assumption: " << *asmpt << "\n";
-          assumptions.push_back(asmpt);
+        }
+        for (auto & chc : chcs) {
+          if (chc.dstRelation == decl) {
+            ExprVector cnj;
+            ExprMap matching;
+            createLeftConjs(chc, cnj);
+            findMatchingFromBody(chc, matching, cnj);
+            Expr destination = bind::fapp (chc.dstRelation, chc.dstVars);
+            ExprVector vars = chc.dstVars;
+            if (decls.find(chc.dstRelation) != decls.end()) {
+              destination = createDestination(chc);
+            }
+            Expr goal = mk<IMPL>(conjoin(cnj, efac), destination);
+            goal = replaceAll(goal, matching);
+            goal = simplifyArithm(goal);
+            goal = simplifyBool(goal);
+            ExprVector current_assumptions = assumptions;
+            if (!prove (current_assumptions, goal)) {
+              return false;
+            }
+          }
         }
       }
 
@@ -191,11 +214,12 @@ namespace ufo
           ExprMap matching;
           if (chc.body->arity() > 1) {
             for(int j = 0; j < chc.body->arity(); ++j) {
-              if (isOpX<NEG>(chc.body->arg(j))) {
-                destination = mkNeg(chc.body->arg(j));
+              Expr body_elem = chc.body->arg(j);
+              if (isOpX<NEG>(body_elem)) {
+                destination = mkNeg(body_elem);
               }
               else {
-                  cnj.push_back(chc.body->arg(j));
+                cnj.push_back(body_elem);
               }
             }
           }
@@ -245,59 +269,40 @@ namespace ufo
 
           // outs() << "GOAL: \n";
           // outs() << *goal << "\n";
-          // findMatchingFromLeftSide(goal->left(), matching);
-          // goal = replaceAll(goal, matching);
-          // goal = simplifyBool(goal);
-          // matching.clear();
-
-          // outs() << "GOAL: \n";
-          // outs() << *goal << "\n";
           findMatchingFromLeftSide(goal->left(), matching);
           goal = replaceAll(goal, matching);
-//          goal = simplifyArithm(goal);
           goal = simplifyBool(goal);
+          if (isOpX<IMPL>(goal)) {
+            matching.clear();
+
+            // outs() << "GOAL: \n";
+            // outs() << *goal << "\n";
+            findMatchingFromLeftSide(goal->left(), matching);
+            goal = replaceAll(goal, matching);
+  //          goal = simplifyArithm(goal);
+            goal = simplifyBool(goal);
+          }
+
           // if (goal->arity() > 0) {
           //   goal = createQuantifiedFormula(goal, constructors);
           // }
           ExprVector current_assumptions = assumptions;
-          // outs() << "assumptions:\n";
-          // for (auto & a : current_assumptions) {
-          //   outs() << *a << "\n";
-          // }
-          // outs() << "goal: \n";
-          // outs() << *goal << "\n";
+//           outs() << "assumptions:\n";
+//           for (auto & a : current_assumptions) {
+//             outs() << *a << "\n";
+//           }
+//           outs() << "goal: \n";
+//           outs() << *goal << "\n";
+//           goal = createQuantifiedFormula(goal, constructors);
           if (!prove (current_assumptions, goal)) {
             // outs() << "CANT PROVE" << *goal << "\n";
             return false;
           }
           else {
+             if (goal->arity() > 0) {
+               goal = createQuantifiedFormula(goal, constructors);
+             }
             assumptions.push_back(goal);
-          }
-        }
-        else {
-          ExprVector cnj;
-          ExprMap matching;
-          createLeftConjs(chc, cnj);
-          findMatchingFromBody(chc, matching, cnj);
-          Expr destination = bind::fapp (chc.dstRelation, chc.dstVars);
-          ExprVector vars = chc.dstVars;
-          if (decls.find(chc.dstRelation) != decls.end()) {
-            destination = createDestination(chc);
-          }
-          Expr goal = mk<IMPL>(conjoin(cnj, efac), destination);
-          goal = replaceAll(goal, matching);
-          goal = simplifyArithm(goal);
-          goal = simplifyBool(goal);
-          ExprVector current_assumptions = assumptions;
-          // outs() << "assumptions:\n";
-          // for (auto & a : current_assumptions) {
-          //   outs() << *a << "\n";
-          // }
-          // outs() << "goal: \n";
-          // outs() << *goal << "\n";
-          if (!prove (current_assumptions, goal)) {
-            // outs() << "CANT PROVE\n";
-            return false;
           }
         }
       }
@@ -387,13 +392,13 @@ namespace ufo
       }
     }
 
-    bool returnValues(int idx, ExprVector &decls, std::map<Expr,int> &buf) {
-      if (idx >= decls.size()) {
+    bool returnValues(int idx, std::map<Expr,int> &buf) {
+      if (idx >= ordered_decls.size()) {
         values_inds = buf;
         assumptions.clear();
         return createQueries();
       }
-      Expr cur = decls[idx];
+      Expr cur = ordered_decls[idx];
       for (auto & chc : chcs) {
         if (chc.dstRelation == cur) {
           size_t vars_size = chc.dstRelation->arity();
@@ -408,7 +413,7 @@ namespace ufo
           for (int i = idxs.size() - 1; i >= 0; --i) {
             buf[chc.dstRelation->left()] = idxs[i];
             // outs() << *chc.dstRelation->left() << " " << idxs[i] << "\n";
-            if (returnValues(idx + 1, decls, buf))
+            if (returnValues(idx + 1, buf))
               return true;
           }
           break;
@@ -426,7 +431,7 @@ namespace ufo
         orderDecls(decl, cur_decls);
       }
       std::map<Expr,int> buf;
-      return returnValues(0, ordered_decls, buf);
+      return returnValues(0, buf);
       // for (auto & decl: decls) {
       //     if (decl->arity() <= 3) {
       //         continue;
@@ -551,7 +556,7 @@ namespace ufo
       return prove (assms, goal, 2, print);
     }
 
-    bool prove (ExprVector& lemmas, Expr fla, int rounds = 2, bool print = false)
+    bool prove (ExprVector& lemmas, Expr fla, int rounds = 2, bool print = true)
     {
       ADTSolver sol (fla, lemmas, constructors, 5, 2, 3, 1, print); // last false is for verbosity
       return isOpX<FORALL>(fla) ? sol.solve() : sol.solveNoind(rounds);
@@ -565,7 +570,7 @@ namespace ufo
     CHCs ruleManager(efac, z3);
     ExprSet adts;
     ruleManager.parse(smt_file);
-   // ruleManager.print();
+//    ruleManager.print();
 
     ExprVector constructors;
     ExprVector assumptions;
